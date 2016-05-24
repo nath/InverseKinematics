@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Kinematics Test</title>
+    <script type="text/javascript">
+        var ctx, canvas;
+        var offsetx = 256, offsety = 256;
+        var links = [{x:0, y:0, theta:0, length: 66, maxChange: 1/8*Math.PI, max: Infinity},
+                     {x:66, y:0, theta:0, length: 66, maxChange: 1/4*Math.PI, max: Infinity},//1/2*Math.PI},
+                     {x:132, y:0, theta:0, length: 66, maxChange: 1/2*Math.PI, max: Infinity}];//1/2*Math.PI}];
+        var x=0, y=0;
+        var currX=0, currY=0;
+        var link = 2;
+        var steps = 500;
+        
+        function setup() {
+            canvas = document.getElementById('kinematics');
+            ctx = canvas.getContext('2d');
+            canvas.addEventListener('click', click);
+            setInterval(render, 50);
+        }
+        
+        function normalize(vec) {
+            var length = Math.sqrt(Math.pow(vec.x, 2) + Math.pow(vec.y, 2));
+            return {x : vec.x/length, y : vec.y/length};
+        }
+        
+        function dot(vec1, vec2) {
+            return vec1.x*vec2.x + vec1.y*vec2.y;
+        }
+        
+        function cross(vec1, vec2) {
+            return vec1.x*vec2.y - vec1.y*vec2.x;
+        }
+        
+        function render() {
+            clear();
+            drawBoundry();
+            drawGoal();
+            drawArms();
+        }
+        
+        function clear() {
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, 512, 512);
+        }
+        
+        function drawBoundry() {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(0, 0, 255, 0.3)";
+            ctx.lineWidth = 1;
+            ctx.arc(offsetx, offsety, 3*links[0].length, 0, 2*Math.PI);
+            ctx.stroke();
+        }
+        
+        function drawGoal() {
+            ctx.beginPath();
+            ctx.fillStyle = "red";
+            ctx.arc(x + offsetx, offsety - y, 1, 0, 2*Math.PI);
+            ctx.fill();
+        }
+        
+        function drawArms() {
+            if (steps < 500 && Math.pow(x-currX, 2) + Math.pow(y-currY, 2) > 1) {
+                var currVec = {x : currX - links[link].x, y : currY - links[link].y};
+                var targetVec = {x : x - links[link].x, y : y - links[link].y};
+                currVec = normalize(currVec);
+                targetVec = normalize(targetVec);
+                  
+                var cosAng = dot(currVec, targetVec);
+                    
+                if (cosAng < 1) {
+                    var ang = Math.min(Math.acos(cosAng), links[link].maxChange);
+                    if (cross(targetVec, currVec) < 0) {
+                        if (Math.abs(links[link].theta + ang) < links[link].max) {
+                            links[link].theta += ang;
+                        }
+                    } else {
+                        if (Math.abs(links[link].theta - ang) < links[link].max) {
+                            links[link].theta -= ang;
+                        }
+                    }
+                }
+                
+                link--;
+                if (link < 0) {
+                    link = 2;
+                }
+                steps++;
+            }
+            
+            var endx, endy, theta;
+            
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            endx = offsetx;
+            endy = offsety;
+            theta = 0;
+            ctx.moveTo(endx, endy);
+            
+            for (var i=0; i<links.length; i++) {
+                theta += links[i].theta;
+                endx += links[i].length*Math.cos(theta);
+                endy -= links[i].length*Math.sin(theta);
+                ctx.lineTo(endx, endy);
+                
+                if (i+1 < links.length) {
+                    links[i+1].x = endx-offsetx;
+                    links[i+1].y = offsety-endy;
+                } else {
+                    currX = endx-offsetx;
+                    currY = offsety-endy;
+                }
+            }
+            
+            ctx.stroke();
+        }
+        
+        function click(e) {
+            var rect = canvas.getBoundingClientRect();
+            x = e.clientX - rect.left - offsetx;
+            y = offsety - (e.clientY - rect.top);
+            steps = 0;
+            link = 2;
+        }
+    </script>
+    <style>
+        #kinematics {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body onload="setup();">
+    <canvas id="kinematics" height="512px" width="512px"></canvas>
+</body>
+
+</html>
